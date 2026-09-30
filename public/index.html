@@ -1,0 +1,525 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#242124" />
+    <title>mania 7k pp helper</title>
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+    <link
+      rel="preload"
+      href="fonts/Nunito-Variable.ttf"
+      as="font"
+      type="font/ttf"
+      crossorigin
+    />
+    <link rel="stylesheet" href="style.css" />
+    <script src="vendor/chart.js" defer></script>
+    <script src="vendor/lucide.js" defer></script>
+    <script src="app.js" type="module"></script>
+  </head>
+  <body>
+    <header class="app-header">
+      <div class="container header-inner">
+        <a class="brand" href="/" aria-label="mania 7k pp helper home"
+          ><span class="brand-mark" aria-hidden="true"
+            ><i></i><i></i><i></i><i></i><i></i><i></i><i></i
+          ></span>
+          <h1>mania <b>7k</b> pp helper</h1></a
+        >
+        <div class="header-actions">
+          <span class="local-status"><span></span>Local</span
+          ><button
+            id="downloads-open"
+            class="icon-button"
+            title="Download queue"
+            aria-label="Download queue"
+          >
+            <i data-lucide="download"></i></button
+          ><button
+            id="about-open"
+            class="icon-button"
+            title="Sources and calculations"
+            aria-label="Sources and calculations"
+          >
+            <i data-lucide="info"></i></button
+          ><button
+            id="shutdown"
+            class="icon-button"
+            title="Stop local server"
+            aria-label="Stop local server"
+          >
+            <i data-lucide="power"></i>
+          </button>
+        </div>
+      </div>
+    </header>
+    <main class="container">
+      <section class="search-section" aria-labelledby="search-heading">
+        <div class="section-top">
+          <h2 id="search-heading">Find your player pool</h2>
+          <span class="context-label"
+            ><i data-lucide="globe-2"></i>Worldwide
+            <span class="context-divider">/</span> osu!mania 7K</span
+          >
+        </div>
+        <form id="search-form">
+          <fieldset class="mode-field">
+            <legend>Search by</legend>
+            <div class="segmented">
+              <label
+                ><input type="radio" name="mode" value="rank" checked /><span
+                  ><i data-lucide="list-ordered"></i>World rank</span
+                ></label
+              ><label
+                ><input type="radio" name="mode" value="pp" /><span
+                  ><i data-lucide="bar-chart-3"></i>Performance</span
+                ></label
+              >
+            </div>
+          </fieldset>
+          <div class="range-field">
+            <div class="range-heading">
+              <label for="range-min" id="range-label">World rank range</label
+              ><span id="range-caption">#1 - #3,000</span>
+            </div>
+            <div class="dual-range">
+              <div class="range-track"><div id="range-fill"></div></div>
+              <input
+                id="slider-min"
+                type="range"
+                min="1"
+                max="3000"
+                value="1"
+                aria-label="Minimum world rank"
+              /><input
+                id="slider-max"
+                type="range"
+                min="1"
+                max="3000"
+                value="100"
+                aria-label="Maximum world rank"
+              />
+            </div>
+            <div class="range-ends">
+              <span id="limit-min">1</span><span id="limit-max">3,000</span>
+            </div>
+          </div>
+          <div class="numeric-field">
+            <label>Inclusive range</label>
+            <div class="numeric-inputs">
+              <input
+                id="range-min"
+                type="number"
+                min="1"
+                max="3000"
+                step="1"
+                value="1"
+                aria-label="Minimum value"
+                required
+              /><span>to</span
+              ><input
+                id="range-max"
+                type="number"
+                min="1"
+                max="3000"
+                step="1"
+                value="100"
+                aria-label="Maximum value"
+                required
+              />
+            </div>
+          </div>
+          <div class="search-action">
+            <button id="search-button" class="primary" type="submit">
+              <i data-lucide="search"></i>Search players</button
+            ><label class="check-label refresh-label"
+              ><input id="refresh" type="checkbox" />Refresh source data</label
+            >
+          </div>
+        </form>
+        <p id="form-error" class="form-error" role="alert" hidden></p>
+      </section>
+      <section
+        id="progress-section"
+        class="progress-section"
+        hidden
+        aria-live="polite"
+      >
+        <div class="progress-top">
+          <div>
+            <span id="progress-stage" class="eyebrow">Collecting data</span>
+            <p id="progress-message">Starting...</p>
+          </div>
+          <div class="progress-actions">
+            <span id="progress-percent">0%</span
+            ><button id="cancel-search" class="secondary compact">
+              <i data-lucide="x"></i>Cancel
+            </button>
+          </div>
+        </div>
+        <div class="progress-track"><div id="progress-fill"></div></div>
+        <div class="progress-timing">
+          <span>Elapsed <strong id="progress-elapsed">0s</strong></span>
+          <span
+            >Estimated remaining
+            <strong id="progress-remaining">Estimating...</strong></span
+          >
+          <span id="progress-cache" class="muted"></span>
+        </div>
+        <div class="progress-steps">
+          <span data-stage="rankings">Rankings</span
+          ><span data-stage="profiles">Exact pp</span
+          ><span data-stage="tracker">Dan levels</span
+          ><span data-stage="best">Best performances</span
+          ><span data-stage="calculation">PP calculation</span>
+        </div>
+      </section>
+      <div id="result-meta" class="result-meta">
+        <span id="result-time">No search yet</span
+        ><button
+          id="notes-open"
+          class="text-button note-button"
+          hidden
+        ></button>
+      </div>
+      <section class="stats" aria-label="Pool summary">
+        <div class="stat">
+          <span>Players</span><strong id="stat-players">--</strong
+          ><small id="stat-player-note">Worldwide pool</small>
+        </div>
+        <div class="stat">
+          <span>World rank</span><strong id="stat-rank">--</strong
+          ><small>7K leaderboard</small>
+        </div>
+        <div class="stat">
+          <span>7K performance</span><strong id="stat-pp">--</strong
+          ><small>pp range</small>
+        </div>
+        <div class="stat">
+          <span>Beatmap entries</span><strong id="stat-maps">--</strong
+          ><small id="stat-map-note">HT / NM / DT-NC</small>
+        </div>
+      </section>
+      <nav class="tabs" aria-label="Result views" role="tablist">
+        <button
+          role="tab"
+          id="tab-players"
+          aria-selected="true"
+          aria-controls="view-players"
+          data-view="players"
+        >
+          <i data-lucide="users"></i>Players<span
+            id="players-count"
+          ></span></button
+        ><button
+          role="tab"
+          id="tab-dans"
+          aria-selected="false"
+          aria-controls="view-dans"
+          data-view="dans"
+        >
+          <i data-lucide="chart-no-axes-column"></i>Dan levels</button
+        ><button
+          role="tab"
+          id="tab-maps"
+          aria-selected="false"
+          aria-controls="view-maps"
+          data-view="maps"
+        >
+          <i data-lucide="music-2"></i>Beatmaps<span id="maps-count"></span>
+        </button>
+      </nav>
+      <section
+        id="view-players"
+        role="tabpanel"
+        aria-labelledby="tab-players"
+        class="view"
+      >
+        <div class="view-title">
+          <div>
+            <h2>Performance distribution</h2>
+            <p id="pp-subtitle">7K pp</p>
+          </div>
+          <button id="all-players" class="secondary compact" disabled>
+            <i data-lucide="list"></i>All players
+          </button>
+        </div>
+        <div class="chart-container">
+          <canvas
+            id="pp-chart"
+            role="img"
+            aria-label="7K player pp histogram"
+          ></canvas>
+          <div class="chart-empty" id="pp-empty">
+            <i data-lucide="chart-no-axes-combined"></i>
+            <h3>No player data</h3>
+            <span>Global 7K</span>
+          </div>
+        </div>
+        <div id="pp-bin-controls" class="bin-controls" hidden>
+          <label for="pp-bins">PP interval</label
+          ><select id="pp-bins"></select>
+        </div>
+        <div id="pp-detail" class="detail-section" hidden></div>
+        <section
+          class="roster-section"
+          aria-labelledby="players-roster-heading"
+        >
+          <div class="view-title">
+            <h3 id="players-roster-heading">All players</h3>
+            <span id="players-roster-count" class="muted small"></span>
+          </div>
+          <div id="players-table" class="table-host">
+            <div class="empty-table">No players yet</div>
+          </div>
+        </section>
+      </section>
+      <section
+        id="view-dans"
+        role="tabpanel"
+        aria-labelledby="tab-dans"
+        class="view"
+        hidden
+      >
+        <div class="view-title">
+          <div>
+            <h2>Dan distribution</h2>
+            <p>
+              <a
+                href="https://mania-tracker.com/?country=GLOBAL"
+                target="_blank"
+                rel="noreferrer"
+                >Mania Tracker</a
+              >
+              <span class="muted">/ whole levels</span>
+            </p>
+          </div>
+          <button id="dan-players" class="secondary compact" disabled>
+            <i data-lucide="list"></i>All players
+          </button>
+        </div>
+        <div class="dan-grid">
+          <section>
+            <div class="chart-heading">
+              <h3><span class="color-dot pink"></span>Regular</h3>
+              <span id="regular-coverage">--</span>
+            </div>
+            <div class="chart-container">
+              <canvas
+                id="regular-chart"
+                role="img"
+                aria-label="Regular dan histogram"
+              ></canvas>
+              <div class="chart-empty" id="regular-empty">
+                <span>No regular dan data</span>
+              </div>
+            </div>
+            <div id="regular-bin-controls" class="bin-controls" hidden>
+              <label for="regular-bins">Regular dan</label
+              ><select id="regular-bins"></select>
+            </div>
+            <div id="regular-missing" class="missing-note"></div>
+          </section>
+          <section>
+            <div class="chart-heading">
+              <h3><span class="color-dot mint"></span>LN</h3>
+              <span id="ln-coverage">--</span>
+            </div>
+            <div class="chart-container">
+              <canvas
+                id="ln-chart"
+                role="img"
+                aria-label="LN dan histogram"
+              ></canvas>
+              <div class="chart-empty" id="ln-empty">
+                <span>No LN dan data</span>
+              </div>
+            </div>
+            <div id="ln-bin-controls" class="bin-controls" hidden>
+              <label for="ln-bins">LN dan</label
+              ><select id="ln-bins"></select>
+            </div>
+            <div id="ln-missing" class="missing-note"></div>
+          </section>
+        </div>
+        <div id="dan-detail" class="detail-section" hidden></div>
+        <section class="roster-section" aria-labelledby="dans-roster-heading">
+          <div class="view-title">
+            <h3 id="dans-roster-heading">All players / dan levels</h3>
+            <span id="dans-roster-count" class="muted small"></span>
+          </div>
+          <div id="dans-table" class="table-host">
+            <div class="empty-table">No players yet</div>
+          </div>
+        </section>
+      </section>
+      <section
+        id="view-maps"
+        role="tabpanel"
+        aria-labelledby="tab-maps"
+        class="view"
+        hidden
+      >
+        <div class="view-title">
+          <div>
+            <h2>Best performance pool</h2>
+            <p id="map-subtitle">7K beatmaps by speed</p>
+          </div>
+          <div class="segmented metric-toggle">
+            <label
+              ><input
+                type="radio"
+                name="map-metric"
+                value="pp_max"
+                checked
+              /><span>PP ceiling</span></label
+            ><label
+              ><input type="radio" name="map-metric" value="stars" /><span
+                >Star rating</span
+              ></label
+            >
+          </div>
+        </div>
+        <div class="chart-container">
+          <canvas
+            id="maps-chart"
+            role="img"
+            aria-label="7K beatmap pp ceiling histogram"
+          ></canvas>
+          <div class="chart-empty" id="maps-empty">
+            <i data-lucide="music-2"></i>
+            <h3>No beatmaps yet</h3>
+            <span>Best performance pool</span>
+          </div>
+        </div>
+        <div id="maps-bin-controls" class="bin-controls" hidden>
+          <label for="maps-bins">Interval</label
+          ><select id="maps-bins"></select>
+        </div>
+        <div id="map-detail" class="detail-section" hidden></div>
+        <section class="frequency-section">
+          <div class="view-title">
+            <div>
+              <h2>Frequency ranking</h2>
+              <p id="frequency-subtitle">
+                Distinct players per beatmap and speed
+              </p>
+            </div>
+          </div>
+          <div id="frequency-table" class="table-host">
+            <div class="empty-table">No beatmaps to rank</div>
+          </div>
+        </section>
+      </section>
+      <footer>
+        <span>mania 7k pp helper</span>
+        <div>
+          <a
+            href="https://osu.ppy.sh/rankings/mania/global/performance?variant=7k"
+            target="_blank"
+            rel="noreferrer"
+            >osu!</a
+          ><a
+            href="https://mania-tracker.com/?country=GLOBAL"
+            target="_blank"
+            rel="noreferrer"
+            >Mania Tracker</a
+          ><a
+            href="https://osu.sayobot.cn/home"
+            target="_blank"
+            rel="noreferrer"
+            >SayoBot</a
+          >
+        </div>
+      </footer>
+    </main>
+    <dialog id="about-dialog">
+      <div class="dialog-header">
+        <h2>Sources &amp; calculations</h2>
+        <button class="icon-button" data-close title="Close" aria-label="Close">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+      <div class="dialog-body prose">
+        <h3>Player pool</h3>
+        <p>
+          Global 7K ranks from osu!. PP boundaries are inclusive and checked
+          against exact 7K profile pp. PP searches continue beyond rank 3,000,
+          up to the public leaderboard's 10,000-player limit.
+        </p>
+        <h3>Dan levels</h3>
+        <p>
+          Only Mania Tracker's 7K regular and LN records. Rating is the site's
+          numerical dan rating. Suffixes are retained in player lists and merged
+          for histograms. Missing records are reported separately.
+        </p>
+        <h3>Best performances</h3>
+        <p>
+          All available pages of osu!mania best performances, including stable
+          and lazer. Only native 7K mania maps enter the pool; standard-mode
+          converts are excluded. Each beatmap ID has up to three entries: HT, NM
+          and DT/NC. Other mods do not exclude scores. Frequency counts distinct
+          players.
+        </p>
+        <h3>PP ceiling</h3>
+        <p>
+          rosu-pp-js 4.0.1: 100% perfect, full combo, osu!stable calculation. HT
+          is 0.75x, NM is 1x, DT/NC is 1.5x. Other mods are ignored for the
+          normalized calculation. This is a calculated ceiling, not the player's
+          achieved pp.
+        </p>
+        <h3>Local storage</h3>
+        <p>
+          Rankings and pp are cached for one hour; best performances and tracker
+          records for six hours. Beatmap calculations are cached by checksum and
+          engine version. A bounded memory cache sits in front of local SQLite.
+          Refresh source data bypasses the timed caches. Optional local Redis is
+          configured in config.json and is disabled by default.
+        </p>
+        <p id="storage-path" class="path"></p>
+        <h3>Downloads</h3>
+        <p>
+          All download links exclude video. Individual osu! downloads may
+          require signing in. Bulk downloads use SayoBot and save one .osz per
+          beatmapset in the local downloads folder.
+        </p>
+        <p class="small muted">
+          This is an independent community tool, not affiliated with osu! or
+          Mania Tracker.
+        </p>
+      </div>
+    </dialog>
+    <dialog id="notes-dialog">
+      <div class="dialog-header">
+        <h2>Source notes</h2>
+        <button class="icon-button" data-close title="Close" aria-label="Close">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+      <div class="dialog-body" id="notes-body"></div>
+    </dialog>
+    <dialog id="downloads-dialog">
+      <div class="dialog-header">
+        <h2>Download queue</h2>
+        <button class="icon-button" data-close title="Close" aria-label="Close">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+      <div class="dialog-body">
+        <div class="download-heading">
+          <span id="download-summary">No downloads</span
+          ><button id="cancel-downloads" class="secondary compact" hidden>
+            <i data-lucide="x"></i>Cancel queue
+          </button>
+        </div>
+        <p class="small muted">
+          SayoBot / no video / one archive per beatmapset
+        </p>
+        <p id="download-path" class="path"></p>
+        <div id="download-items"></div>
+      </div>
+    </dialog>
+    <div id="toast" class="toast" role="status" hidden></div>
+  </body>
+</html>

@@ -1,0 +1,35 @@
+# Publish only the minimal application and its documentation.
+/*
+!/.gitignore
+!/.npmrc
+!/README.md
+!/README.zh-CN.md
+!/THIRD_PARTY_NOTICES.md
+!/package.json
+!/package-lock.json
+!/config.example.json
+!/server.mjs
+!/launcher.mjs
+!/Start Helper.cmd
+!/Start Helper.vbs
+!/lib/
+/lib/*
+!/lib/*.mjs
+!/public/
+/public/*
+!/public/app.js
+!/public/core.js
+!/public/favicon.svg
+!/public/index.html
+!/public/style.css
+!/public/fonts/
+/public/fonts/*
+!/public/fonts/Nunito-Variable.ttf
+!/public/fonts/OFL.txt
+!/public/fonts/SOURCE.json
+!/public/vendor/
+/public/vendor/*
+!/public/vendor/chart.js
+!/public/vendor/chart-LICENSE.md
+!/public/vendor/lucide.js
+!/public/vendor/lucide-LICENSE.txt
