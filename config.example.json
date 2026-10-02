@@ -1,4 +1,6 @@
 {
   "redisUrl": null,
-  "memoryCacheMB": 64
+  "memoryCacheMB": 64,
+  "localBeatmapDirectory": null,
+  "publicOrigin": null
 }

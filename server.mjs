@@ -3,14 +3,13 @@ import fs from "node:fs";
 import fsp from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { randomBytes } from "node:crypto";
 import { spawn } from "node:child_process";
 import { setDefaultResultOrder } from "node:dns";
 import { Cache } from "./lib/cache.mjs";
 import { Sources } from "./lib/sources.mjs";
-import { SearchJobs } from "./lib/jobs.mjs";
-import { Downloads } from "./lib/downloads.mjs";
+import { Snapshot } from "./lib/snapshot.mjs";
 import { loadDanAsset } from "./lib/dan-assets.mjs";
+import { Visitors } from "./lib/visitors.mjs";
 
 const root = path.dirname(fileURLToPath(import.meta.url));
 setDefaultResultOrder("ipv4first");
@@ -26,10 +25,11 @@ const cache = new Cache(path.join(root, "data"), {
     Math.max(0, Math.min(256, Number(config.memoryCacheMB) || 0)) * 1048576,
   redis,
 });
-const sources = new Sources(cache),
-  jobs = new SearchJobs(sources, cache),
-  downloads = new Downloads(path.join(root, "downloads"));
-const token = randomBytes(24).toString("hex");
+let oauth;
+try { oauth = JSON.parse(await fsp.readFile(path.join(root, 'oauth.local.json'), 'utf8')); }
+catch (error) { if (error.code !== 'ENOENT') throw new Error('Invalid local OAuth configuration.'); }
+const sources = new Sources(cache, { oauth, localBeatmapDirectory: config.localBeatmapDirectory });
+sources.snapshot = new Snapshot(path.join(root, 'data/snapshot/snapshot.sqlite'));
 const mime = {
   ".html": "text/html; charset=utf-8",
   ".js": "text/javascript; charset=utf-8",
@@ -40,6 +40,8 @@ const mime = {
   ".png": "image/png",
 };
 let port = Number(process.env.PPHELPER_PORT) || 7277;
+const publicOrigin = config.publicOrigin ? new URL(config.publicOrigin).origin : null;
+const visitors = new Visitors(sources,cache,path.join(root,'downloads'),!!publicOrigin);
 function json(res, status, data) {
   res.writeHead(status, {
     "Content-Type": "application/json; charset=utf-8",
@@ -62,13 +64,25 @@ const server = http.createServer(async (req, res) => {
     return json(res, 403, { error: "Invalid host." });
   if (
     req.headers.origin &&
-    ![`http://127.0.0.1:${port}`, `http://localhost:${port}`].includes(
+    ![`http://127.0.0.1:${port}`, `http://localhost:${port}`, publicOrigin].includes(
       req.headers.origin,
     )
   )
     return json(res, 403, { error: "Invalid origin." });
   const url = new URL(req.url, `http://127.0.0.1:${port}`);
   try {
+    const {jobs,downloads,token}=visitors.get(req,res);
+    if (req.method === 'GET' && /^\/api\/downloads\/files\/\d+$/.test(url.pathname)) {
+      const id = Number(url.pathname.split('/').at(-1));
+      if (!downloads.status()?.items.some(item=>item.id===id&&item.status==='saved'))
+        return json(res,404,{error:'Downloaded file is not available.'});
+      const filename=path.join(downloads.directory,`${id}-novideo.osz`);
+      const stat=await fsp.stat(filename);
+      res.writeHead(200,{'Content-Type':'application/octet-stream','Content-Length':stat.size,
+        'Content-Disposition':`attachment; filename="${id}-novideo.osz"`,'Cache-Control':'private, no-store'});
+      fs.createReadStream(filename).pipe(res);
+      return;
+    }
     if (req.method === "GET" && url.pathname === "/api/health")
       return json(res, 200, { app: "mania-7k-pp-helper", root, port });
     if (req.method === "GET" && url.pathname === "/api/info")
@@ -76,6 +90,7 @@ const server = http.createServer(async (req, res) => {
         token,
         root,
         download_directory: downloads.directory,
+        hosted: !!publicOrigin,
         active_job:
           [...jobs.jobs.values()].find((j) => j.status === "running")?.id ||
           null,
@@ -86,6 +101,7 @@ const server = http.createServer(async (req, res) => {
           memory_mb: cache.memoryBytes / 1048576,
           redis: redis?.status || "disabled",
         },
+        snapshot: sources.snapshot.open() ? {date:sources.snapshot.date, scope:'Mania top 10,000 sample; legacy BP preview'} : null,
       });
     if (req.method === "GET" && url.pathname === "/api/results/latest")
       return json(res, 200, jobs.latest);
@@ -152,6 +168,7 @@ const server = http.createServer(async (req, res) => {
       if (url.pathname === "/api/downloads/cancel")
         return json(res, 200, downloads.cancel());
       if (url.pathname === "/api/shutdown") {
+        if (publicOrigin) return json(res, 403, {error:'Server shutdown is disabled in hosted mode.'});
         for (const job of jobs.jobs.values()) job.controller.abort();
         downloads.cancel();
         json(res, 200, { ok: true });
@@ -230,8 +247,7 @@ server.on("listening", async () => {
     }).unref();
 });
 process.on("SIGINT", () => {
-  for (const job of jobs.jobs.values()) job.controller.abort();
-  downloads.cancel();
+  visitors.stop();
   server.close();
   cache.close();
   process.exit(0);

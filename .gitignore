@@ -8,6 +8,14 @@
 !/package.json
 !/package-lock.json
 !/config.example.json
+!/oauth.example.json
+!/test.mjs
+!/top50-check.mjs
+!/hybrid-check.mjs
+!/multisource-check.mjs
+!/rankings-check.mjs
+!/progressive-check.mjs
+!/visitor-check.mjs
 !/server.mjs
 !/launcher.mjs
 !/Start Helper.cmd
@@ -15,10 +23,13 @@
 !/lib/
 /lib/*
 !/lib/*.mjs
+/lib/jobs.baseline.mjs
 !/public/
 /public/*
 !/public/app.js
 !/public/core.js
+!/public/i18n.js
+!/public/visitor-storage.js
 !/public/favicon.svg
 !/public/index.html
 !/public/style.css
@@ -33,3 +44,7 @@
 !/public/vendor/chart-LICENSE.md
 !/public/vendor/lucide.js
 !/public/vendor/lucide-LICENSE.txt
+!/tools/
+/tools/*
+!/tools/import-snapshot.py
+!/tools/snapshot-check.py
