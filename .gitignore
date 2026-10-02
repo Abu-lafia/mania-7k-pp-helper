@@ -16,6 +16,8 @@
 !/rankings-check.mjs
 !/progressive-check.mjs
 !/visitor-check.mjs
+!/exact-membership-check.mjs
+!/progressive-ui-check.mjs
 !/server.mjs
 !/launcher.mjs
 !/Start Helper.cmd

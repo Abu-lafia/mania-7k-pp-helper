@@ -68,4 +68,4 @@ npm test
 python tools/snapshot-check.py
 ```
 
-The offline checks cover top-50 collection/cache refresh, hybrid routing and cancellation, ZIP validation/fallback/local seeding, pp-range boundaries, progressive replacement, visitor isolation and snapshot import parsing. No OAuth credentials or network access are needed.
+The offline checks cover top-50 collection/cache refresh, hybrid routing and cancellation, ZIP validation/fallback/local seeding, pp-range boundaries, exact membership before aggregation, progressive replacement, DOM focus/caret and expanded detail updates, visitor isolation and snapshot import parsing. No OAuth credentials or network access are needed once dependencies are installed. jsdom is used only by the development tests.

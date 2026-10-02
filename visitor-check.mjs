@@ -8,7 +8,7 @@ function visit(cookie){let saved;const session=visitors.get({headers:{cookie}}, 
 const a=visit(), b=visit();assert.notEqual(a.cookie,b.cookie);assert.notEqual(a.session.token,b.session.token);
 assert.equal(a.session.jobs.latest,null);assert.equal(b.session.jobs.latest,null);
 const result={id:'public-computation',query:{mode:'rank',min:1,max:2},maps:[{beatmapset_id:99}],players:[],issues:[]};
-values.set('search-result-top50-hybrid-v6:rank:1:2',result);
+values.set('search-result-top50-hybrid-v7:rank:1:2',result);
 const job=a.session.jobs.start({mode:'rank',min:1,max:2});assert.equal(job.status,'complete');
 assert.equal(a.session.jobs.latest.id,job.id);assert.equal(b.session.jobs.latest,null);
 assert.equal(b.session.jobs.status(job.id),null);assert.equal(b.session.jobs.cancel(job.id),null);

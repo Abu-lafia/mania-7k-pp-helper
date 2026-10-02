@@ -50,6 +50,7 @@ const state = {
   selected: new Set(),
   charts: new Map(),
   bins: new Map(),
+  details: new Map(),
   metric: "pp_max",
   range: { rank: [1, 100], pp: [8500, 10000] },
   polling: false,
@@ -317,8 +318,10 @@ function renderResult(preserveSelection = false) {
   if (!r) return;
   if (!preserveSelection) state.selected.clear();
   if (!preserveSelection) state.tables.clear();
-  for (const name of ["pp-detail", "dan-detail", "map-detail"])
-    $(name).hidden = true;
+  if (!preserveSelection) {
+    state.details.clear();
+    for (const name of ["pp-detail", "dan-detail", "map-detail"]) $(name).hidden = true;
+  }
   const s = r.summary;
   $("stat-players").textContent = num(s.players);
   $("stat-rank").textContent =
@@ -374,6 +377,11 @@ function renderResult(preserveSelection = false) {
   $("players-roster-count").textContent = `${num(s.players)} ${t("players")}`;
   $("dans-roster-count").textContent = `${num(s.players)} ${t("players")}`;
   createTable("frequency-table", r.maps, "maps", { bulk: true });
+  for (const [id,detail] of state.details) if (!$(id).hidden) {
+    const rows=detail.select(r);
+    $(id).querySelector('.detail-header span').textContent=`${num(rows.length)} ${t('results')}`;
+    createTable(id+'-table',rows,detail.type);
+  }
   icons();
 }
 const rangeLabel = (bin, unit = "pp") =>
@@ -518,7 +526,8 @@ function renderCharts() {
   if (!r) return;
   drawChart("pp", histogram(r.players, "pp"), {
     onSelect: (bin, label) =>
-      openPlayerDetail("pp-detail", bin.rows, label, false),
+      openPlayerDetail("pp-detail", bin.rows, label, false,
+        r=>r.players.filter(p=>Number.isFinite(p.pp)&&p.pp>=bin.min&&(bin.last?p.pp<=bin.max:p.pp<bin.max))),
   });
   for (const side of ["regular", "ln"]) {
     $(`${side}-coverage`).textContent =
@@ -533,6 +542,7 @@ function renderCharts() {
           bin.rows,
           `${side === "ln" ? "LN" : t("Regular")} / ${label}`,
           true,
+          r=>r.players.filter(p=>p[side]?.group===bin.label),
         ),
     });
   }
@@ -546,7 +556,10 @@ function drawMapsChart() {
     axis:
       state.metric === "stars" ? t("osu!mania star rating") : t("Perfect pp ceiling"),
     kind: "beatmap entries",
-    onSelect: (bin, label) => openMapDetail(bin.rows, label),
+    onSelect: (bin, label) => {
+      const metric=state.metric;
+      openMapDetail(bin.rows,label,r=>r.maps.filter(m=>Number.isFinite(m[metric])&&m[metric]>=bin.min&&(bin.last?m[metric]<=bin.max:m[metric]<bin.max)));
+    },
   });
   $("maps-chart").setAttribute(
     "aria-label",
@@ -572,7 +585,8 @@ function renderMissing(side) {
 function detailHeader(title, count) {
   return `<div class="detail-header"><div><h3>${esc(title)}</h3><span>${num(count)} ${t("results")}</span></div><button class="icon-button collapse-detail" title="${t("Collapse list")}" aria-label="${t("Collapse list")}">${icon("chevron-up")}</button></div><div class="detail-table"></div>`;
 }
-function openPlayerDetail(id, rows, title, dan) {
+function openPlayerDetail(id, rows, title, dan, select) {
+  state.details.set(id,{select,type:dan?'dan':'players'});
   const host = $(id);
   host.hidden = false;
   host.innerHTML = detailHeader(title, rows.length);
@@ -582,7 +596,8 @@ function openPlayerDetail(id, rows, title, dan) {
   icons();
   host.scrollIntoView({ behavior: "smooth", block: "nearest" });
 }
-function openMapDetail(rows, title) {
+function openMapDetail(rows, title, select) {
+  state.details.set('map-detail',{select,type:'maps'});
   const host = $("map-detail");
   host.hidden = false;
   host.innerHTML = detailHeader(title, rows.length);
@@ -636,6 +651,11 @@ const mapColumns = [
 function createTable(id, rows, type, { bulk = false } = {}) {
   const host = $(id);
   const previous = state.tables.get(id);
+  if (previous && host.querySelector('.table-toolbar')) {
+    previous.rows=rows;
+    renderTable(previous);
+    return;
+  }
   const table = {
     id,
     rows,
