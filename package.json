@@ -8,13 +8,17 @@
     "node": ">=24"
   },
   "scripts": {
-    "start": "node server.mjs"
+    "start": "node server.mjs",
+    "test": "node test.mjs"
   },
   "dependencies": {
-    "parse5": "7.3.0",
-    "entities": "6.0.1",
-    "rosu-pp-js": "4.0.1",
     "@redis/client": "6.2.1",
-    "cluster-key-slot": "1.1.2"
+    "cluster-key-slot": "1.1.2",
+    "entities": "6.0.1",
+    "parse5": "7.3.0",
+    "rosu-pp-js": "4.0.1"
+  },
+  "devDependencies": {
+    "jsdom": "26.1.0"
   }
 }

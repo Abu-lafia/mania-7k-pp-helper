@@ -1,0 +1,20 @@
+import assert from 'node:assert/strict';
+import {Visitors} from './lib/visitors.mjs';
+const values=new Map([['last-result-native7-v1',{id:'old-global-private-result'}]]);
+const cache={get:k=>values.get(k)||null,set:(k,v)=>values.set(k,v),has:k=>values.has(k)};
+const sources={requests:0,hits:0};
+const visitors=new Visitors(sources,cache,'./data/visitor-fixture-downloads',true);
+function visit(cookie){let saved;const session=visitors.get({headers:{cookie}}, {setHeader:(k,v)=>{if(k==='Set-Cookie')saved=v}});return {session,cookie:saved?.split(';')[0]||cookie};}
+const a=visit(), b=visit();assert.notEqual(a.cookie,b.cookie);assert.notEqual(a.session.token,b.session.token);
+assert.equal(a.session.jobs.latest,null);assert.equal(b.session.jobs.latest,null);
+const result={id:'public-computation',query:{mode:'rank',min:1,max:2},maps:[{beatmapset_id:99}],players:[],issues:[]};
+values.set('search-result-top50-hybrid-v7:rank:1:2',result);
+const job=a.session.jobs.start({mode:'rank',min:1,max:2});assert.equal(job.status,'complete');
+assert.equal(a.session.jobs.latest.id,job.id);assert.equal(b.session.jobs.latest,null);
+assert.equal(b.session.jobs.status(job.id),null);assert.equal(b.session.jobs.cancel(job.id),null);
+assert.throws(()=>b.session.downloads.start([99],b.session.jobs.latest));
+assert.equal(visit(a.cookie).session,a.session);
+const restarted=new Visitors(sources,cache,'./data/visitor-fixture-downloads',true);
+assert.equal(restarted.get({headers:{cookie:a.cookie}},{setHeader(){}}).jobs.latest.id,job.id);
+assert.equal(restarted.get({headers:{cookie:b.cookie}},{setHeader(){}}).jobs.latest,null);
+console.log('Anonymous cookies, private history persistence, token/job/cancel/download isolation and shared public cache passed.');

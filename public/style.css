@@ -34,6 +34,12 @@ body {
     Arial,
     sans-serif;
 }
+.language-toggle { white-space: nowrap; min-width: 64px; }
+html[lang="zh-CN"] body { font-family: "Helper Nunito", "Microsoft YaHei", "PingFang SC", sans-serif; }
+@media (max-width: 600px) {
+  .header-inner { flex-wrap: wrap; gap: 12px; }
+  .header-actions { margin-left: auto; }
+}
 button,
 input,
 select {
